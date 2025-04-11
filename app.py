@@ -10,9 +10,11 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import GRU, Dense
 from tensorflow.keras.optimizers import Adam
 from ollama import Client
+from groq import Client
+from groq import Groq
 
 # --- Districts and Mandals with coordinates ---
-districts =  {
+districts = {
     "Hyderabad": {
         "coordinates": (17.385044, 78.486671),
         "mandals": {
@@ -172,7 +174,9 @@ def forecast_temperature(lat, lon):
 # --- Get location ---
 lat, lon = mandal_options[selected_mandal]
 forecasted_temps = forecast_temperature(lat, lon)
-days = [(datetime.today() + timedelta(days=i)).strftime('%A') for i in range(1, 8)]
+
+# --- Use fixed Monday-to-Sunday list ---
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 # --- Plot the forecast ---
 fig = go.Figure()
@@ -192,9 +196,9 @@ fig.update_layout(
 )
 st.plotly_chart(fig)
 
-# --- Generate full emoji/mood descriptions using Ollama ---
+# --- Generate full emoji/mood descriptions using Groq ---
 def get_llm_daywise_descriptions(district, mandal, temps, days):
-    client = Client()
+    client = Client(api_key="your_GROQCLOUD_APIKEY")  # Replace with your key
     forecast_data = "\n".join([f"{day}: {round(temp,1)}°C" for day, temp in zip(days, temps)])
     prompt = f"""
 You are a cheerful and smart weather assistant. Here's the 7-day forecast for {mandal}, {district}:
@@ -209,15 +213,21 @@ Example:
 Monday - 🔥 Scorching heat! Avoid afternoon sun and hydrate well.
 Tuesday - 🌞 Bright and sunny! Great for laundry or a morning walk.
 """
+    response = client.chat.completions.create(
+        model="mixtral-8x7b-32768",  # or "llama3-8b-8192"
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content
 
-    response = client.chat(model='gemma3', messages=[
-        {"role": "user", "content": prompt}
-    ])
-    return response['message']['content']
 
-# --- Generate summary using Ollama ---
+import streamlit as st
+from groq import Groq
+
+# --- Generate summary using Groq ---
 def get_llm_summary(district, mandal, temps, days):
-    client = Client()
+    client = Groq(api_key="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")  # Replace with your key
     forecast_data = "\n".join([f"{day}: {round(temp,1)}°C" for day, temp in zip(days, temps)])
     prompt = f"""
 You are a friendly weather assistant. Here's the 7-day max temperature forecast for {mandal}, {district}:
@@ -226,14 +236,17 @@ You are a friendly weather assistant. Here's the 7-day max temperature forecast 
 
 Generate a natural language summary explaining the weekly trend, weather comfort, and public advice.
 """
-    response = client.chat(model='gemma3', messages=[
-        {"role": "user", "content": prompt}
-    ])
-    return response['message']['content']
+    response = client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response.choices[0].message.content
 
 # --- Display table ---
 st.markdown("### 📅 Daily Forecast Summary (Powered by LLM 🧠)")
-daywise_descriptions = get_llm_daywise_descriptions(selected_district, selected_mandal, forecasted_temps, days)
+daywise_descriptions = get_llm_summary(selected_district, selected_mandal, forecasted_temps, days)
 st.code(daywise_descriptions)
 
 # --- Display Weekly Summary ---
@@ -241,9 +254,8 @@ st.markdown("### 🗒 Weekly Weather Summary")
 summary = get_llm_summary(selected_district, selected_mandal, forecasted_temps, days)
 st.write(summary)
 
-
 # --- Disclaimer ---
 st.markdown("""
 ---
-📌 *Note: This is an AI-based weather forecasting model. While it uses historical data and modern techniques, it may not always be accurate.*
+📌 Note: This is an AI-based weather forecasting model. While it uses historical data and modern techniques, it may not always be accurate.
 """)
