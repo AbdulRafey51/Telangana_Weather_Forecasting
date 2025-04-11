@@ -7,3 +7,4 @@ requests-cache
 retry-requests
 tensorflow
 Groq
+joblib
