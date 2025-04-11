@@ -1,9 +1,10 @@
 pandas
 numpy
-streamlit
 plotly
+streamlit
 openmeteo-requests
 requests-cache
 retry-requests
 tensorflow
-Groq
+ollama
+groq
