@@ -5,6 +5,7 @@ streamlit
 openmeteo-requests
 requests-cache
 retry-requests
-tensorflow
+tensorflow==2.15.0
+keras
 ollama
 groq
