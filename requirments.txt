@@ -6,4 +6,4 @@ openmeteo-requests
 requests-cache
 retry-requests
 tensorflow
-ollama
+Groq
